@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function adminDoc() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data;
+    }
+
+    function isActiveAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && adminDoc().isActive == true;
+    }
+
+    function isOwner() {
+      return isActiveAdmin() && adminDoc().role == 'owner';
+    }
+
+    match /meta/{doc} {
+      allow read: if true;
+      allow create: if doc == 'app'
+        && isSignedIn()
+        && !exists(/databases/$(database)/documents/meta/app)
+        && request.resource.data.hasOwner == true
+        && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isOwner();
+      allow delete: if false;
+    }
+
+    match /content/{id} {
+      allow read: if resource.data.status == 'published' || isActiveAdmin();
+      allow create, update: if isActiveAdmin()
+        && (isOwner()
+            || request.resource.data.authorId == request.auth.uid
+            || (resource != null && resource.data.authorId == request.auth.uid));
+      allow delete: if isActiveAdmin();
+    }
+
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if isActiveAdmin();
+    }
+
+    match /live_feed/{id} {
+      allow read: if true;
+      allow write: if isActiveAdmin();
+    }
+
+    match /admins/{id} {
+      allow read: if isSignedIn()
+        && (request.auth.uid == id || isActiveAdmin());
+      allow create: if isSignedIn()
+        && request.auth.uid == id
+        && request.resource.data.id == id
+        && request.resource.data.isActive == true
+        && request.resource.data.role in ['owner', 'contributor'];
+      allow update: if isOwner()
+        || (isActiveAdmin() && request.auth.uid == id);
+      allow delete: if false;
+    }
+
+    match /admin_invites/{email} {
+      allow read: if true;
+      allow create, delete: if isOwner();
+      allow update: if isOwner()
+        || (isSignedIn()
+            && request.auth.token.email.lower() == email
+            && request.resource.data.claimed == true);
+    }
+  }
+}

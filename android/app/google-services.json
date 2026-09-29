@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1021458228463",
+    "project_id": "alamiyah",
+    "storage_bucket": "alamiyah.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1021458228463:android:6d0173708acbeb974da71a",
+        "android_client_info": {
+          "package_name": "com.alamiyah.alamiyah"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASXizCHJeLYd2qJkBP94bmXJ8T8KknRYM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
