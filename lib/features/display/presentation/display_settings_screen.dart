@@ -46,6 +46,28 @@ class DisplaySettingsScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           const _PreviewCard(),
           const SizedBox(height: 28),
+          _SectionLabel(label: 'Appearance', colors: colors),
+          const SizedBox(height: 8),
+          Text(
+            'Auto follows Maghrib and Fajr for your saved location.',
+            style: GoogleFonts.dmSans(
+              fontSize: 12,
+              color: colors.brandSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (final mode in AppearanceMode.values) ...[
+            _ChoiceCard(
+              title: mode.label,
+              subtitle: mode.subtitle,
+              selected: prefs.appearance == mode,
+              onTap: () => ref
+                  .read(displayPrefsProvider.notifier)
+                  .setAppearance(mode),
+            ),
+            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 20),
           _SectionLabel(label: 'Theme', colors: colors),
           const SizedBox(height: 12),
           GridView.count(
@@ -116,6 +138,27 @@ class DisplaySettingsScreen extends ConsumerWidget {
                   },
                 ),
             ],
+          ),
+          const SizedBox(height: 28),
+          _SectionLabel(label: 'Asr time', colors: colors),
+          const SizedBox(height: 12),
+          for (final school in AsrSchool.values) ...[
+            _ChoiceCard(
+              title: school.label,
+              subtitle: school.subtitle,
+              selected: prefs.asrSchool == school,
+              onTap: () =>
+                  ref.read(displayPrefsProvider.notifier).setAsrSchool(school),
+            ),
+            const SizedBox(height: 8),
+          ],
+          _ToggleCard(
+            title: 'Show both Asr times',
+            subtitle: 'The other school appears beside Asr when the list is open',
+            value: prefs.showBothAsr,
+            duration: motion,
+            onChanged: (value) =>
+                ref.read(displayPrefsProvider.notifier).setShowBothAsr(value),
           ),
           const SizedBox(height: 28),
           _SectionLabel(label: 'Arabic typeface', colors: colors),
@@ -443,18 +486,14 @@ class _FontChoice extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.alamiyahColors;
     final sample = switch (id) {
-      ArabicFontId.naskh => GoogleFonts.notoNaskhArabic(
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-          color: colors.arabicEmphasis,
-        ),
-      ArabicFontId.amiri => GoogleFonts.amiri(
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-          color: colors.arabicEmphasis,
-        ),
-      ArabicFontId.scheherazade => GoogleFonts.scheherazadeNew(
+      ArabicFontId.uthmani => GoogleFonts.scheherazadeNew(
           fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: colors.arabicEmphasis,
+        ),
+      ArabicFontId.indopak => GoogleFonts.notoNastaliqUrdu(
+          fontSize: 22,
+          height: 1.8,
           fontWeight: FontWeight.w600,
           color: colors.arabicEmphasis,
         ),
@@ -495,6 +534,70 @@ class _FontChoice extends StatelessWidget {
                       'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
                       textDirection: TextDirection.rtl,
                       style: sample,
+                    ),
+                  ],
+                ),
+              ),
+              if (selected)
+                Icon(Icons.check_circle_rounded, color: colors.accentGold),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChoiceCard extends StatelessWidget {
+  const _ChoiceCard({
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.alamiyahColors;
+    return Material(
+      color: colors.cardBackground,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? colors.accentGold : colors.chipBackground,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.dmSans(
+                        fontWeight: FontWeight.w600,
+                        color: colors.brandPrimary,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 12,
+                        color: colors.brandSecondary,
+                      ),
                     ),
                   ],
                 ),

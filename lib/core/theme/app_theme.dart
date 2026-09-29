@@ -231,21 +231,15 @@ class AppTheme {
     final size = fontSize * display.fontScale;
     final resolved = color ?? colors.arabicEmphasis;
     return switch (display.arabicFont) {
-      ArabicFontId.naskh => GoogleFonts.notoNaskhArabic(
-          fontSize: size,
-          height: 1.7,
-          fontWeight: fontWeight,
-          color: resolved,
-        ),
-      ArabicFontId.amiri => GoogleFonts.amiri(
-          fontSize: size,
-          height: 1.75,
-          fontWeight: fontWeight,
-          color: resolved,
-        ),
-      ArabicFontId.scheherazade => GoogleFonts.scheherazadeNew(
+      ArabicFontId.uthmani => GoogleFonts.scheherazadeNew(
           fontSize: size + 2,
           height: 1.8,
+          fontWeight: fontWeight,
+          color: resolved,
+        ),
+      ArabicFontId.indopak => GoogleFonts.notoNastaliqUrdu(
+          fontSize: size,
+          height: 2.1,
           fontWeight: fontWeight,
           color: resolved,
         ),

@@ -10,7 +10,11 @@ enum AppThemeId { lightGreen, darkGreen, sepiaWarm, midnight }
 
 enum AccentId { gold, brass, sage, clay, teal, rose }
 
-enum ArabicFontId { naskh, amiri, scheherazade }
+enum AppearanceMode { system, day, night, auto }
+
+enum AsrSchool { earlier, later }
+
+enum ArabicFontId { uthmani, indopak }
 
 enum ChimeId { droplet, wind, bell }
 
@@ -60,11 +64,38 @@ extension AccentIdX on AccentId {
       };
 }
 
+extension AppearanceModeX on AppearanceMode {
+  String get label => switch (this) {
+        AppearanceMode.system => 'System',
+        AppearanceMode.day => 'Day',
+        AppearanceMode.night => 'Night',
+        AppearanceMode.auto => 'Auto',
+      };
+
+  String get subtitle => switch (this) {
+        AppearanceMode.system => 'Follow the phone setting',
+        AppearanceMode.day => 'Stay in a light reading palette',
+        AppearanceMode.night => 'Stay in a dark reading palette',
+        AppearanceMode.auto => 'Night between Maghrib and Fajr',
+      };
+}
+
+extension AsrSchoolX on AsrSchool {
+  String get label => switch (this) {
+        AsrSchool.earlier => 'Earlier Asr',
+        AsrSchool.later => 'Later Asr',
+      };
+
+  String get subtitle => switch (this) {
+        AsrSchool.earlier => 'Shafi\'i, Maliki, Hanbali',
+        AsrSchool.later => 'Hanafi',
+      };
+}
+
 extension ArabicFontIdX on ArabicFontId {
   String get label => switch (this) {
-        ArabicFontId.naskh => 'Naskh',
-        ArabicFontId.amiri => 'Amiri',
-        ArabicFontId.scheherazade => 'Scheherazade',
+        ArabicFontId.uthmani => 'Uthmani',
+        ArabicFontId.indopak => 'IndoPak',
       };
 }
 
@@ -88,7 +119,10 @@ class DisplayPrefs {
     this.theme = AppThemeId.lightGreen,
     this.fontScale = 1.0,
     this.accent = AccentId.gold,
-    this.arabicFont = ArabicFontId.naskh,
+    this.arabicFont = ArabicFontId.uthmani,
+    this.appearance = AppearanceMode.day,
+    this.asrSchool = AsrSchool.earlier,
+    this.showBothAsr = false,
     this.reduceMotion = false,
     this.soundEffects = true,
     this.chime = ChimeId.droplet,
@@ -98,12 +132,42 @@ class DisplayPrefs {
   final double fontScale;
   final AccentId accent;
   final ArabicFontId arabicFont;
+  final AppearanceMode appearance;
+  final AsrSchool asrSchool;
+  final bool showBothAsr;
   final bool reduceMotion;
   final bool soundEffects;
   final ChimeId chime;
 
   static const fontStops = [0.85, 1.0, 1.15, 1.35];
   static const fontLabels = ['Small', 'Regular', 'Large', 'Extra'];
+
+  AppThemeId resolvedTheme({
+    required Brightness platform,
+    DateTime? now,
+    DateTime? maghrib,
+    DateTime? fajr,
+  }) {
+    final moment = now ?? DateTime.now();
+    final night = switch (appearance) {
+      AppearanceMode.day => false,
+      AppearanceMode.night => true,
+      AppearanceMode.system => platform == Brightness.dark,
+      AppearanceMode.auto =>
+        maghrib != null &&
+            fajr != null &&
+            (moment.isAfter(maghrib) || moment.isBefore(fajr)),
+    };
+    if (night == theme.isDark) return theme;
+    if (night) {
+      return theme == AppThemeId.sepiaWarm
+          ? AppThemeId.midnight
+          : AppThemeId.darkGreen;
+    }
+    return theme == AppThemeId.midnight
+        ? AppThemeId.sepiaWarm
+        : AppThemeId.lightGreen;
+  }
 
   int get fontStopIndex {
     var best = 1;
@@ -123,6 +187,9 @@ class DisplayPrefs {
     double? fontScale,
     AccentId? accent,
     ArabicFontId? arabicFont,
+    AppearanceMode? appearance,
+    AsrSchool? asrSchool,
+    bool? showBothAsr,
     bool? reduceMotion,
     bool? soundEffects,
     ChimeId? chime,
@@ -132,6 +199,9 @@ class DisplayPrefs {
       fontScale: fontScale ?? this.fontScale,
       accent: accent ?? this.accent,
       arabicFont: arabicFont ?? this.arabicFont,
+      appearance: appearance ?? this.appearance,
+      asrSchool: asrSchool ?? this.asrSchool,
+      showBothAsr: showBothAsr ?? this.showBothAsr,
       reduceMotion: reduceMotion ?? this.reduceMotion,
       soundEffects: soundEffects ?? this.soundEffects,
       chime: chime ?? this.chime,
@@ -143,6 +213,9 @@ class DisplayPrefs {
         'fontScale': fontScale,
         'accent': accent.name,
         'arabicFont': arabicFont.name,
+        'appearance': appearance.name,
+        'asrSchool': asrSchool.name,
+        'showBothAsr': showBothAsr,
         'reduceMotion': reduceMotion,
         'soundEffects': soundEffects,
         'chime': chime.name,
@@ -157,9 +230,16 @@ class DisplayPrefs {
         fontScale: (map['fontScale'] as num?)?.toDouble() ?? 1.0,
         accent: _enumFrom(AccentId.values, map['accent'] as String?) ??
             AccentId.gold,
-        arabicFont:
-            _enumFrom(ArabicFontId.values, map['arabicFont'] as String?) ??
-                ArabicFontId.naskh,
+        arabicFont: _arabicFontFrom(map['arabicFont'] as String?),
+        appearance: _enumFrom(
+              AppearanceMode.values,
+              map['appearance'] as String?,
+            ) ??
+            AppearanceMode.day,
+        asrSchool:
+            _enumFrom(AsrSchool.values, map['asrSchool'] as String?) ??
+                AsrSchool.earlier,
+        showBothAsr: map['showBothAsr'] as bool? ?? false,
         reduceMotion: map['reduceMotion'] as bool? ?? false,
         soundEffects: map['soundEffects'] as bool? ?? true,
         chime: _enumFrom(ChimeId.values, map['chime'] as String?) ??
@@ -168,6 +248,15 @@ class DisplayPrefs {
     }
     return DisplayPrefs(theme: _themeFrom(box.get(AppConstants.themeModeKey) as String?));
   }
+}
+
+ArabicFontId _arabicFontFrom(String? name) {
+  return switch (name) {
+    'indopak' => ArabicFontId.indopak,
+    'uthmani' || 'naskh' || 'amiri' || 'scheherazade' || null =>
+      ArabicFontId.uthmani,
+    _ => ArabicFontId.uthmani,
+  };
 }
 
 AppThemeId _themeFrom(String? name) {
@@ -232,7 +321,7 @@ extension AlamiyahDisplayX on BuildContext {
       Theme.of(this).extension<AlamiyahDisplay>() ??
       const AlamiyahDisplay(
         fontScale: 1,
-        arabicFont: ArabicFontId.naskh,
+        arabicFont: ArabicFontId.uthmani,
         reduceMotion: false,
       );
 
@@ -268,6 +357,15 @@ class DisplayPrefsController extends Notifier<DisplayPrefs> {
 
   Future<void> setArabicFont(ArabicFontId font) =>
       update((p) => p.copyWith(arabicFont: font));
+
+  Future<void> setAppearance(AppearanceMode mode) =>
+      update((p) => p.copyWith(appearance: mode));
+
+  Future<void> setAsrSchool(AsrSchool school) =>
+      update((p) => p.copyWith(asrSchool: school));
+
+  Future<void> setShowBothAsr(bool value) =>
+      update((p) => p.copyWith(showBothAsr: value));
 
   Future<void> setReduceMotion(bool value) =>
       update((p) => p.copyWith(reduceMotion: value));

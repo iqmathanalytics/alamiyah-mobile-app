@@ -90,8 +90,14 @@ class _AlamiyahAppState extends ConsumerState<AlamiyahApp> {
   Widget build(BuildContext context) {
     final router = ref.watch(goRouterProvider);
     final prefs = ref.watch(displayPrefsProvider);
+    final prayers = ref.watch(todayPrayersProvider);
     ref.watch(soundServiceProvider);
-    final theme = AppTheme.fromPrefs(prefs);
+    final resolved = prefs.resolvedTheme(
+      platform: WidgetsBinding.instance.platformDispatcher.platformBrightness,
+      maghrib: prayers.maghrib,
+      fajr: prayers.fajr,
+    );
+    final theme = AppTheme.fromPrefs(prefs.copyWith(theme: resolved));
 
     return MaterialApp.router(
       title: AppConstants.appName,
