@@ -228,7 +228,7 @@ class _ThemePage extends ConsumerWidget {
               crossAxisSpacing: 10,
               childAspectRatio: 1.35,
               children: [
-                for (final id in AppThemeId.values)
+                for (final id in themesFor(dark: false))
                   Material(
                     color: id.palette.cardBackground,
                     borderRadius: BorderRadius.circular(18),
@@ -248,10 +248,10 @@ class _ThemePage extends ConsumerWidget {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: prefs.theme == id
+                            color: prefs.lightTheme == id
                                 ? id.palette.brandPrimary
                                 : colors.softShadow,
-                            width: prefs.theme == id ? 2 : 1,
+                            width: prefs.lightTheme == id ? 2 : 1,
                           ),
                         ),
                         child: Column(

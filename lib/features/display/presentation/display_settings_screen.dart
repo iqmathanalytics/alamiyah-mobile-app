@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/l10n/app_language.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/motion/app_motion.dart';
 import '../../../core/sound/sound_service.dart';
 import '../../../core/theme/alamiyah_colors.dart';
@@ -16,7 +18,8 @@ class DisplaySettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(displayPrefsProvider);
     final colors = context.alamiyahColors;
-    final motion = AppMotion.of(context, AppMotion.screen);
+    final strings = context.s;
+    final motion = AppMotion.of(context, AppMotion.micro);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -24,7 +27,7 @@ class DisplaySettingsScreen extends ConsumerWidget {
         scrolledUnderElevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: Text(
-          'Display',
+          strings.display,
           style: GoogleFonts.dmSans(
             fontWeight: FontWeight.w600,
             color: colors.brandPrimary,
@@ -35,7 +38,7 @@ class DisplaySettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
         children: [
           Text(
-            'Reading atmosphere',
+            strings.reading,
             style: GoogleFonts.dmSans(
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -46,7 +49,21 @@ class DisplaySettingsScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           const _PreviewCard(),
           const SizedBox(height: 28),
-          _SectionLabel(label: 'Appearance', colors: colors),
+          _SectionLabel(label: strings.languageLabel, colors: colors),
+          const SizedBox(height: 12),
+          for (final language in AppLanguage.values) ...[
+            _ChoiceCard(
+              title: language.nativeName,
+              subtitle: '',
+              selected: prefs.language == language,
+              onTap: () => ref
+                  .read(displayPrefsProvider.notifier)
+                  .setLanguage(language),
+            ),
+            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 20),
+          _SectionLabel(label: strings.appearance, colors: colors),
           const SizedBox(height: 8),
           Text(
             'Auto follows Maghrib and Fajr for your saved location.',
@@ -58,8 +75,18 @@ class DisplaySettingsScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           for (final mode in AppearanceMode.values) ...[
             _ChoiceCard(
-              title: mode.label,
-              subtitle: mode.subtitle,
+              title: switch (mode) {
+                AppearanceMode.system => strings.system,
+                AppearanceMode.day => strings.day,
+                AppearanceMode.night => strings.night,
+                AppearanceMode.auto => strings.auto,
+              },
+              subtitle: switch (mode) {
+                AppearanceMode.system => strings.systemSub,
+                AppearanceMode.day => strings.daySub,
+                AppearanceMode.night => strings.nightSub,
+                AppearanceMode.auto => strings.autoSub,
+              },
               selected: prefs.appearance == mode,
               onTap: () => ref
                   .read(displayPrefsProvider.notifier)
@@ -68,30 +95,45 @@ class DisplaySettingsScreen extends ConsumerWidget {
             const SizedBox(height: 8),
           ],
           const SizedBox(height: 20),
-          _SectionLabel(label: 'Theme', colors: colors),
-          const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.45,
-            children: [
-              for (final id in AppThemeId.values)
-                _ThemeChoice(
-                  id: id,
-                  selected: prefs.theme == id,
-                  onTap: () async {
-                    HapticFeedback.selectionClick();
-                    await ref.read(displayPrefsProvider.notifier).setTheme(id);
-                    await ref.read(soundServiceProvider).settle();
-                  },
-                ),
-            ],
-          ),
+          if (prefs.appearance == AppearanceMode.day ||
+              prefs.appearance == AppearanceMode.night) ...[
+            _SectionLabel(
+              label: prefs.appearance == AppearanceMode.night
+                  ? strings.nightThemes
+                  : strings.dayThemes,
+              colors: colors,
+            ),
+            const SizedBox(height: 12),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 1.45,
+              children: [
+                for (final id in themesFor(
+                  dark: prefs.appearance == AppearanceMode.night,
+                ))
+                  _ThemeChoice(
+                    id: id,
+                    selected: (prefs.appearance == AppearanceMode.night
+                            ? prefs.darkTheme
+                            : prefs.lightTheme) ==
+                        id,
+                    onTap: () async {
+                      HapticFeedback.selectionClick();
+                      await ref
+                          .read(displayPrefsProvider.notifier)
+                          .setTheme(id);
+                      await ref.read(soundServiceProvider).settle();
+                    },
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 28),
-          _SectionLabel(label: 'Text size', colors: colors),
+          _SectionLabel(label: strings.textSize, colors: colors),
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -121,7 +163,7 @@ class DisplaySettingsScreen extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 12),
-          _SectionLabel(label: 'Accent', colors: colors),
+          _SectionLabel(label: strings.accent, colors: colors),
           const SizedBox(height: 12),
           Wrap(
             spacing: 12,
@@ -140,12 +182,16 @@ class DisplaySettingsScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 28),
-          _SectionLabel(label: 'Asr time', colors: colors),
+          _SectionLabel(label: strings.asrTime, colors: colors),
           const SizedBox(height: 12),
           for (final school in AsrSchool.values) ...[
             _ChoiceCard(
-              title: school.label,
-              subtitle: school.subtitle,
+              title: school == AsrSchool.earlier
+                  ? strings.earlierAsr
+                  : strings.laterAsr,
+              subtitle: school == AsrSchool.earlier
+                  ? strings.earlierSub
+                  : strings.laterSub,
               selected: prefs.asrSchool == school,
               onTap: () =>
                   ref.read(displayPrefsProvider.notifier).setAsrSchool(school),
@@ -153,15 +199,15 @@ class DisplaySettingsScreen extends ConsumerWidget {
             const SizedBox(height: 8),
           ],
           _ToggleCard(
-            title: 'Show both Asr times',
-            subtitle: 'The other school appears beside Asr when the list is open',
+            title: strings.showBoth,
+            subtitle: strings.showBothSub,
             value: prefs.showBothAsr,
             duration: motion,
             onChanged: (value) =>
                 ref.read(displayPrefsProvider.notifier).setShowBothAsr(value),
           ),
           const SizedBox(height: 28),
-          _SectionLabel(label: 'Arabic typeface', colors: colors),
+          _SectionLabel(label: strings.arabicType, colors: colors),
           const SizedBox(height: 12),
           for (final id in ArabicFontId.values) ...[
             _FontChoice(
@@ -256,7 +302,7 @@ class _PreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.alamiyahColors;
     return AnimatedContainer(
-      duration: AppMotion.of(context, AppMotion.theme),
+            duration: AppMotion.of(context, AppMotion.micro),
       curve: AppMotion.curve,
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -592,13 +638,14 @@ class _ChoiceCard extends StatelessWidget {
                         color: colors.brandPrimary,
                       ),
                     ),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.dmSans(
-                        fontSize: 12,
-                        color: colors.brandSecondary,
+                    if (subtitle.isNotEmpty)
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.dmSans(
+                          fontSize: 12,
+                          color: colors.brandSecondary,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),

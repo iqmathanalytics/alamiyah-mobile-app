@@ -1,131 +1,121 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/alamiyah_colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../shared/widgets/app_shell.dart';
-import '../../../shared/widgets/section_label.dart';
-import '../../home/providers/feed_providers.dart';
+import '../../library/category_contents.dart';
+import '../../library/library_catalog.dart';
 
-class CategoriesScreen extends ConsumerWidget {
+class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({super.key});
 
-  IconData _iconFor(String ref) {
-    return switch (ref) {
-      'wb_sunny_outlined' => Icons.wb_sunny_outlined,
-      'nights_stay_outlined' => Icons.nights_stay_outlined,
-      'favorite_border' => Icons.favorite_border,
-      'auto_awesome_outlined' => Icons.auto_awesome_outlined,
-      'menu_book_outlined' => Icons.menu_book_outlined,
-      'play_circle_outline' => Icons.play_circle_outline,
-      'brightness_2_outlined' => Icons.brightness_2_outlined,
-      _ => Icons.spa_outlined,
-    };
-  }
+  @override
+  State<CategoriesScreen> createState() => _CategoriesScreenState();
+}
 
-  Color _parseColor(String hex) {
-    final cleaned = hex.replaceFirst('#', '');
-    return Color(int.parse('FF$cleaned', radix: 16));
-  }
+class _CategoriesScreenState extends State<CategoriesScreen> {
+  String? _selectedId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final categoriesAsync = ref.watch(categoriesProvider);
-    final colors = context.alamiyahColors;
-
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AlamiyahAppBar(title: 'Categories'),
-      body: categoriesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => SoftEmptyState(
-          icon: Icons.wifi_off_rounded,
-          title: 'Could not load categories',
-          body: '$e',
-          actionLabel: 'Retry',
-          onAction: () => ref.invalidate(categoriesProvider),
-        ),
-        data: (categories) {
-          if (categories.isEmpty) {
-            return const SoftEmptyState(
-              icon: Icons.grid_view_outlined,
-              title: 'No categories yet',
-              body:
-                  'Create the first admin owner to seed defaults, then pull to refresh.',
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-            itemCount: categories.length + 1,
-            separatorBuilder: (_, index) =>
-                SizedBox(height: index == 0 ? 14 : 12),
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return const SectionLabel('Browse by theme');
-              }
-              final cat = categories[index - 1];
-              final tint = _parseColor(cat.colorHint);
-              return Material(
-                color: colors.cardBackground,
-                borderRadius: BorderRadius.circular(22),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(22),
-                  onTap: () {
-                    ref.read(feedFilterProvider.notifier).setCategory(cat.id);
-                    context.go('/home');
-                  },
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: colors.brandPrimary.withValues(alpha: 0.06),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.softShadow,
-                          blurRadius: 14,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: tint.withValues(alpha: 0.18),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Icon(_iconFor(cat.iconRef), color: tint),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Text(
-                              cat.name,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: colors.brandPrimary,
-                              ),
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 14,
-                            color: colors.brandSecondary,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+      appBar: AlamiyahAppBar(title: context.s.categories),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        children: [
+          for (final item in libraryCollections) ...[
+            _CollectionTile(
+              icon: item.icon,
+              title: item.title,
+              subtitle: item.subtitle,
+              selected: _selectedId == item.id,
+              onTap: () => setState(() {
+                _selectedId = _selectedId == item.id ? null : item.id;
+              }),
+            ),
+            if (_selectedId == item.id) ...[
+              const SizedBox(height: 10),
+              CategoryContents(collection: item),
+            ],
+            const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CollectionTile extends StatelessWidget {
+  const _CollectionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.alamiyahColors;
+    return Material(
+      color: selected ? colors.chipBackground : colors.cardBackground,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: colors.chipBackground,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-              );
-            },
-          );
-        },
+                child: Icon(icon, color: colors.brandPrimary),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: colors.brandPrimary,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 12,
+                        color: colors.brandSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                selected
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+                size: 20,
+                color: colors.brandSecondary,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

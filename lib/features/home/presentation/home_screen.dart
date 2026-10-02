@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/motion/app_motion.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/theme/alamiyah_colors.dart';
 import '../../../shared/widgets/animated_filter_chip.dart';
 import '../../../shared/widgets/app_shell.dart';
@@ -13,6 +14,8 @@ import '../../../shared/widgets/feed_skeleton.dart';
 import '../../../shared/widgets/section_label.dart';
 import '../../bookmarks/providers/bookmark_controller.dart';
 import '../../guide/tour_targets.dart';
+import '../../library/category_contents.dart';
+import '../../library/library_catalog.dart';
 import '../domain/feed_layout.dart';
 import '../providers/feed_providers.dart';
 import 'home_hijri_prayer_card.dart';
@@ -25,8 +28,8 @@ class HomeScreen extends ConsumerWidget {
     final featuredAsync = ref.watch(featuredContentProvider);
     final publishedAsync = ref.watch(publishedContentProvider);
     final composedAsync = ref.watch(composedFeedProvider);
-    final categoriesAsync = ref.watch(categoriesProvider);
-    final filter = ref.watch(feedFilterProvider);
+    final selectedId = ref.watch(feedFilterProvider).categoryId;
+    final selected = selectedId == null ? null : collectionById(selectedId);
     final bookmarks = ref.watch(bookmarkControllerProvider);
     final colors = context.alamiyahColors;
 
@@ -39,11 +42,9 @@ class HomeScreen extends ConsumerWidget {
     Future<void> refresh() async {
       ref.invalidate(featuredContentProvider);
       ref.invalidate(publishedContentProvider);
-      ref.invalidate(categoriesProvider);
       await Future.wait([
         ref.read(featuredContentProvider.future),
         ref.read(publishedContentProvider.future),
-        ref.read(categoriesProvider.future),
       ]);
     }
 
@@ -105,68 +106,58 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    const SliverToBoxAdapter(
+                    SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.fromLTRB(20, 24, 20, 10),
-                        child: SectionLabel('Categories'),
+                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
+                        child: SectionLabel(context.s.categories),
                       ),
                     ),
                     SliverToBoxAdapter(
                       child: SizedBox(
                         key: TourTargets.categories,
                         height: 46,
-                        child: categoriesAsync.when(
-                          data: (categories) {
-                            if (categories.isEmpty) {
-                              return const Center(
-                                child: Text('No categories yet'),
-                              );
-                            }
-                            return ListView.separated(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20),
-                              scrollDirection: Axis.horizontal,
-                              itemCount: categories.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(width: 8),
-                              itemBuilder: (context, index) {
-                                final cat = categories[index];
-                                return AnimatedFilterChip(
-                                  label: cat.name,
-                                  selected: filter.categoryId == cat.id,
-                                  onSelected: (_) {
-                                    ref
-                                        .read(feedFilterProvider.notifier)
-                                        .selectCategory(cat.id);
-                                  },
-                                );
-                              },
+                        child: ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: libraryCollections.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final item = libraryCollections[index];
+                            return AnimatedFilterChip(
+                              label: item.title,
+                              selected: selectedId == item.id,
+                              onSelected: (_) => ref
+                                  .read(feedFilterProvider.notifier)
+                                  .selectCategory(item.id),
                             );
                           },
-                          loading: () => const SizedBox.shrink(),
-                          error: (e, _) => Center(child: Text('$e')),
                         ),
                       ),
                     ),
+                    if (selected != null)
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                        sliver: SliverToBoxAdapter(
+                          child: CategoryContents(collection: selected),
+                        ),
+                      )
+                    else ...[
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
-                        child: SectionLabel(
-                          filter.categoryId == null
-                              ? 'For you'
-                              : 'In this category',
-                        ),
+                        child: SectionLabel(context.s.forYou),
                       ),
                     ),
                     ..._feedSlivers(
                       context: context,
                       composedAsync: composedAsync,
-                      filterKey: filter.categoryId ?? 'all',
+                      filterKey: 'all',
                       bookmarks: bookmarks,
                       onBookmark: (id) => ref
                           .read(bookmarkControllerProvider.notifier)
                           .toggle(id),
                     ),
+                    ],
                   ],
                 ),
     );

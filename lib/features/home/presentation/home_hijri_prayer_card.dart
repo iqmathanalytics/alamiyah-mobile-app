@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/theme/alamiyah_colors.dart';
 import '../../../core/theme/display_prefs.dart';
 import '../../../data/services/hijri_service.dart';
@@ -39,6 +40,7 @@ class _HomeHijriPrayerCardState extends ConsumerState<HomeHijriPrayerCard> {
   @override
   Widget build(BuildContext context) {
     final colors = context.alamiyahColors;
+    final strings = context.s;
     final hijri = HijriDate.now();
     final prayers = ref.watch(todayPrayersProvider);
     final showBoth = ref.watch(displayPrefsProvider).showBothAsr;
@@ -121,7 +123,7 @@ class _HomeHijriPrayerCardState extends ConsumerState<HomeHijriPrayerCard> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  'Next · ${prayers.next} in $wait',
+                  '${strings.next} · ${strings.prayer(prayers.next)} in $wait',
                   style: GoogleFonts.dmSans(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -139,18 +141,35 @@ class _HomeHijriPrayerCardState extends ConsumerState<HomeHijriPrayerCard> {
                   visualDensity: VisualDensity.compact,
                 ),
                 child: Text(
-                  _expanded ? 'Show less' : 'Show more',
+                  _expanded ? strings.showLess : strings.showMore,
                   style: GoogleFonts.dmSans(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
                 ),
               ),
-              Text(
-                'Qibla ${prayers.qiblaDegrees.round()}° from north · ${prayers.makkahKm.round()} km',
-                style: GoogleFonts.dmSans(
-                  fontSize: 12,
-                  color: colors.brandSecondary,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => context.push('/qibla'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.brandPrimary,
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: Icon(
+                    Icons.explore_outlined,
+                    size: 16,
+                    color: colors.accentGold,
+                  ),
+                  label: Text(
+                    '${strings.qibla} ${prayers.qiblaDegrees.round()}° · ${prayers.makkahKm.round()} km',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: colors.brandSecondary,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 6),
@@ -202,7 +221,7 @@ class _HomeHijriPrayerCardState extends ConsumerState<HomeHijriPrayerCard> {
         children: [
           Expanded(
             child: Text(
-              row.$1,
+              context.s.prayer(row.$1),
               style: GoogleFonts.dmSans(
                 fontSize: 13,
                 fontWeight: current ? FontWeight.w700 : FontWeight.w500,

@@ -14,6 +14,7 @@ import '../../../core/theme/alamiyah_colors.dart';
 import '../../../data/models/models.dart';
 import '../../../data/services/service_providers.dart';
 import '../../home/providers/feed_providers.dart';
+import '../../library/library_catalog.dart';
 import '../providers/admin_providers.dart';
 
 class AdminContentFormScreen extends ConsumerStatefulWidget {
@@ -44,6 +45,7 @@ class _AdminContentFormScreenState
 
   late ContentType _type;
   String? _category;
+  String? _section;
   var _status = ContentStatus.draft;
   var _featured = false;
   var _schedule = false;
@@ -85,9 +87,7 @@ class _AdminContentFormScreenState
   }
 
   Future<void> _bootstrap() async {
-    final categories =
-        await ref.read(contentRepositoryProvider).fetchCategories();
-    _category ??= categories.isNotEmpty ? categories.first.id : 'morning';
+    _category ??= libraryCollections.first.id;
 
     if (widget.contentId != null) {
       final item =
@@ -107,6 +107,7 @@ class _AdminContentFormScreenState
         }
         _tags.text = item.tags.join(', ');
         _category = item.category;
+        _section = item.section;
         _status = item.status;
         _featured = item.featured;
         _scheduledAt = item.scheduledAt;
@@ -151,6 +152,7 @@ class _AdminContentFormScreenState
       _caption.text = map['caption'] as String? ?? '';
       _mediaUrl.text = map['mediaUrl'] as String? ?? '';
       _category = map['category'] as String? ?? _category;
+      _section = map['section'] as String? ?? _section;
     } catch (_) {}
   }
 
@@ -169,6 +171,7 @@ class _AdminContentFormScreenState
           'caption': _caption.text,
           'mediaUrl': _mediaUrl.text,
           'category': _category,
+          'section': _section,
         }),
       );
     }
@@ -276,7 +279,9 @@ class _AdminContentFormScreenState
         id: id,
         type: _type,
         title: _title.text.trim(),
-        category: _category ?? 'morning',
+        category: collectionById(_category ?? '')?.id ??
+            libraryCollections.first.id,
+        section: _section,
         tags: _parseTags(),
         arabicText: _type == ContentType.text ? _arabic.text.trim() : null,
         transliteration:
@@ -321,7 +326,11 @@ class _AdminContentFormScreenState
   @override
   Widget build(BuildContext context) {
     final colors = context.alamiyahColors;
-    final categoriesAsync = ref.watch(categoriesProvider);
+    final collection = collectionById(_category ?? '') ?? libraryCollections.first;
+    final sections = collection.entries.map((entry) => entry.title).toList();
+    if (_section != null && !sections.contains(_section)) {
+      sections.add(_section!);
+    }
 
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -348,30 +357,55 @@ class _AdminContentFormScreenState
             ),
           ),
           const SizedBox(height: 12),
-          categoriesAsync.when(
-            loading: () => const LinearProgressIndicator(),
-            error: (e, _) => Text('$e'),
-            data: (cats) {
-              return DropdownButtonFormField<String>(
-                // ignore: deprecated_member_use
-                value: cats.any((c) => c.id == _category)
-                    ? _category
-                    : (cats.isNotEmpty ? cats.first.id : null),
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(),
+          DropdownButtonFormField<String>(
+            // ignore: deprecated_member_use
+            value: libraryCollections.any((c) => c.id == _category)
+                ? _category
+                : libraryCollections.first.id,
+            decoration: const InputDecoration(
+              labelText: 'Category',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              for (final item in libraryCollections)
+                DropdownMenuItem(
+                  value: item.id,
+                  child: Text(item.title),
                 ),
-                items: cats
-                    .map(
-                      (c) => DropdownMenuItem(
-                        value: c.id,
-                        child: Text(c.name),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _category = v),
-              );
-            },
+            ],
+            onChanged: (value) => setState(() {
+              _category = value;
+              final next = collectionById(value ?? '');
+              if (next == null ||
+                  !next.entries.any((entry) => entry.title == _section)) {
+                _section = null;
+              }
+            }),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            // ignore: deprecated_member_use
+            value: _section != null && sections.contains(_section)
+                ? _section
+                : '',
+            decoration: const InputDecoration(
+              labelText: 'List',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem(
+                value: '',
+                child: Text('This category'),
+              ),
+              for (final title in sections)
+                DropdownMenuItem(
+                  value: title,
+                  child: Text(title),
+                ),
+            ],
+            onChanged: (value) => setState(() {
+              _section = (value == null || value.isEmpty) ? null : value;
+            }),
           ),
           const SizedBox(height: 12),
           TextField(

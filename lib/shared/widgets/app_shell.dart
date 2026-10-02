@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/l10n/app_strings.dart';
 import '../../core/sound/sound_service.dart';
 import '../../core/theme/alamiyah_colors.dart';
 import '../../features/guide/guided_tour_overlay.dart';
@@ -40,6 +41,7 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.alamiyahColors;
+    final strings = context.s;
     final onHome = navigationShell.currentIndex == 0;
     // On Home with nothing to pop: allow the system to exit the app.
     final canExit = onHome && !GoRouter.of(context).canPop();
@@ -71,31 +73,31 @@ class AppShell extends ConsumerWidget {
               onDestinationSelected: _onTap,
               indicatorColor: colors.chipBackground,
               backgroundColor: Colors.transparent,
-              destinations: const [
+              destinations: [
                 NavigationDestination(
                   icon: Icon(Icons.home_outlined),
                   selectedIcon: Icon(Icons.home_rounded),
-                  label: 'Home',
+                  label: strings.home,
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.grid_view_outlined),
                   selectedIcon: Icon(Icons.grid_view_rounded),
-                  label: 'Categories',
+                  label: strings.categories,
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.calendar_month_outlined),
                   selectedIcon: Icon(Icons.calendar_month),
-                  label: 'Calendar',
+                  label: strings.calendar,
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.videocam_outlined),
                   selectedIcon: Icon(Icons.videocam_rounded),
-                  label: 'Live',
+                  label: strings.live,
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.bookmark_border_rounded),
                   selectedIcon: Icon(Icons.bookmark_rounded),
-                  label: 'Saved',
+                  label: strings.saved,
                 ),
               ],
             ),
@@ -165,7 +167,7 @@ class AlamiyahAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions: [
         if (showDisplaySettings)
           Padding(
-            key: TourTargets.display,
+            key: isHome ? TourTargets.display : null,
             padding: const EdgeInsets.only(right: 10),
             child: IconButton(
               tooltip: 'Display settings',

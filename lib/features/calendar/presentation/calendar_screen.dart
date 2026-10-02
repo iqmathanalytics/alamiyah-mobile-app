@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/alamiyah_colors.dart';
 import '../../../core/theme/display_prefs.dart';
+import '../../../data/calendar/city_search.dart';
 import '../../../data/calendar/islamic_events.dart';
 import '../../../data/calendar/prayer_cities.dart';
+import '../../../data/services/device_location.dart';
 import '../../../data/services/fasting_reminder_service.dart';
 import '../../../data/services/fasting_tracker.dart';
 import '../../../data/services/hijri_service.dart';
@@ -24,6 +25,7 @@ class CalendarScreen extends ConsumerStatefulWidget {
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   late HijriDate _cursor;
   late HijriDate _selected;
+  var _findingLocation = false;
 
   @override
   void initState() {
@@ -38,6 +40,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final colors = context.alamiyahColors;
     final flags = ref.watch(calendarFlagsProvider);
     final location = ref.watch(prayerLocationProvider);
+    final prayers = ref.watch(todayPrayersProvider);
     final today = HijriDate.now();
     final ramadan = today.isRamadan || flags.preview;
 
@@ -239,6 +242,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           const SizedBox(height: 20),
           _LocationCard(
             location: location,
+            prayers: prayers,
+            finding: _findingLocation,
             onPickCity: () => _pickCity(context),
             onUseGps: () => _useGps(context),
           ),
@@ -297,33 +302,39 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   Future<void> _useGps(BuildContext context) async {
+    if (_findingLocation) return;
+    setState(() => _findingLocation = true);
     try {
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Location is off — pick a city instead.'),
-            ),
-          );
-        }
-        return;
-      }
-      final pos = await Geolocator.getCurrentPosition();
+      final fix = await readCurrentCoordinates();
       await ref.read(prayerLocationProvider.notifier).setGps(
-            latitude: pos.latitude,
-            longitude: pos.longitude,
+            latitude: fix.latitude,
+            longitude: fix.longitude,
           );
-    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not read location. $e')),
+          const SnackBar(
+            content: Text(
+              'Prayer times now follow where you are. The same place is used on Home and for the qibla.',
+            ),
+          ),
         );
       }
+    } on DeviceLocationException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read location. Try again, or choose a city.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _findingLocation = false);
     }
   }
 
@@ -359,14 +370,25 @@ class _Dow extends StatelessWidget {
   }
 }
 
+String _clock(DateTime time) {
+  final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+  final minute = time.minute.toString().padLeft(2, '0');
+  final suffix = time.hour < 12 ? 'AM' : 'PM';
+  return '$hour:$minute $suffix';
+}
+
 class _LocationCard extends StatelessWidget {
   const _LocationCard({
     required this.location,
+    required this.prayers,
+    required this.finding,
     required this.onPickCity,
     required this.onUseGps,
   });
 
   final PrayerLocation location;
+  final DayPrayers prayers;
+  final bool finding;
   final VoidCallback onPickCity;
   final VoidCallback onUseGps;
 
@@ -389,15 +411,45 @@ class _LocationCard extends StatelessWidget {
               color: colors.brandPrimary,
             ),
           ),
-          if (location.source == LocationSource.makkahDefault)
-            Text(
-              'Using Makkah until you set a city or allow location.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+          const SizedBox(height: 4),
+          Text(
+            'This place is used for the prayer times on Home, the qibla direction, and fasting reminders.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 10),
+          for (final row in prayers.primary)
+            if (row.$1 != 'Sunrise' && row.$1 != 'Duha')
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        row.$1,
+                        style: GoogleFonts.dmSans(
+                          fontSize: 13,
+                          color: colors.brandSecondary,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _clock(row.$2),
+                      style: GoogleFonts.dmSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: colors.brandPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           const SizedBox(height: 8),
           Row(
             children: [
-              TextButton(onPressed: onUseGps, child: const Text('Use location')),
+              TextButton(
+                onPressed: finding ? null : onUseGps,
+                child: Text(finding ? 'Finding location…' : 'Use location'),
+              ),
               TextButton(onPressed: onPickCity, child: const Text('Choose city')),
             ],
           ),
@@ -416,13 +468,17 @@ class _CitySheet extends StatefulWidget {
 
 class _CitySheetState extends State<_CitySheet> {
   var _query = '';
+  List<PrayerCity> _shown = prayerCities;
+
+  Future<void> _search(String query) async {
+    final results = await searchCities(query);
+    if (!mounted || _query != query) return;
+    setState(() => _shown = results);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = prayerCities
-        .where((c) =>
-            c.label.toLowerCase().contains(_query.toLowerCase()))
-        .toList();
+    final typed = _query.trim().isNotEmpty;
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -437,24 +493,39 @@ class _CitySheetState extends State<_CitySheet> {
             TextField(
               autofocus: true,
               decoration: const InputDecoration(
-                hintText: 'Search a city',
+                hintText: 'Type a city',
                 prefixIcon: Icon(Icons.search_rounded),
               ),
-              onChanged: (v) => setState(() => _query = v),
+              onChanged: (value) {
+                setState(() => _query = value);
+                _search(value);
+              },
             ),
+            if (!typed)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Type a few letters to find a city in Malaysia.',
+                  ),
+                ),
+              ),
             const SizedBox(height: 8),
             Expanded(
-              child: ListView.builder(
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final city = filtered[index];
-                  return ListTile(
-                    title: Text(city.name),
-                    subtitle: Text(city.country),
-                    onTap: () => Navigator.pop(context, city),
-                  );
-                },
-              ),
+              child: _shown.isEmpty
+                  ? const Center(child: Text('No city matches those letters.'))
+                  : ListView.builder(
+                          itemCount: _shown.length,
+                          itemBuilder: (context, index) {
+                            final city = _shown[index];
+                            return ListTile(
+                              title: Text(city.name),
+                              subtitle: Text(city.country),
+                              onTap: () => Navigator.pop(context, city),
+                            );
+                          },
+                        ),
             ),
           ],
         ),

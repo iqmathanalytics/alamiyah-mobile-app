@@ -56,7 +56,9 @@ List<FeedBlock> composeFeed({
 
   final dhikr = take((c) =>
       c.type == ContentType.text &&
-      (c.category == 'morning' || c.category == 'evening'));
+      (c.category == 'invocations' ||
+          c.category == 'morning' ||
+          c.category == 'evening'));
   if (dhikr != null) blocks.add(DailyDhikrBlock(dhikr));
 
   final media = <ContentItem>[];

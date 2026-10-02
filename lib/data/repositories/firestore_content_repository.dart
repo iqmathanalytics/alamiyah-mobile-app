@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../features/library/library_catalog.dart';
 import '../models/models.dart';
 import '../services/demo_content_seed.dart';
 import 'content_repository.dart';
@@ -45,7 +46,7 @@ class FirestoreContentRepository implements ContentRepository {
     }
 
     final snap = await query.get();
-    var items = snap.docs.map(_fromDoc).toList();
+    var items = snap.docs.map(_fromDoc).map(alignContentItem).toList();
 
     if (categoryId != null) {
       items = items.where((c) => c.category == categoryId).toList();
@@ -69,19 +70,12 @@ class FirestoreContentRepository implements ContentRepository {
   Future<ContentItem?> fetchById(String id) async {
     final doc = await _content.doc(id).get();
     if (!doc.exists) return null;
-    return _fromDoc(doc);
+    return alignContentItem(_fromDoc(doc));
   }
 
   @override
   Future<List<Category>> fetchCategories() async {
-    final snap = await _categories.get();
-    final cats = snap.docs.map((doc) {
-      final data = Map<String, dynamic>.from(doc.data());
-      data['id'] = doc.id;
-      return Category.fromJson(data);
-    }).toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    return cats;
+    return libraryCategories;
   }
 
   LiveFeedLink _liveFromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -198,65 +192,49 @@ class FirestoreContentRepository implements ContentRepository {
 
   @override
   Future<void> seedDefaultCategoriesIfEmpty() async {
-    final existing = await _categories.limit(1).get();
-    if (existing.docs.isNotEmpty) return;
+    final marker = await _categories.doc(libraryCategories.first.id).get();
+    if (marker.exists) return;
+    await syncLibraryCategories();
+  }
 
-    const defaults = [
-      Category(
-        id: 'morning',
-        name: 'Morning Adhkar',
-        iconRef: 'wb_sunny_outlined',
-        colorHint: '#7BA882',
-        sortOrder: 1,
-      ),
-      Category(
-        id: 'evening',
-        name: 'Evening Adhkar',
-        iconRef: 'nights_stay_outlined',
-        colorHint: '#3D6B5A',
-        sortOrder: 2,
-      ),
-      Category(
-        id: 'situational',
-        name: 'Situational Duas',
-        iconRef: 'favorite_border',
-        colorHint: '#C4A35A',
-        sortOrder: 3,
-      ),
-      Category(
-        id: 'names',
-        name: 'Names of Allah',
-        iconRef: 'auto_awesome_outlined',
-        colorHint: '#5A8F7B',
-        sortOrder: 4,
-      ),
-      Category(
-        id: 'reflections',
-        name: 'Reflections',
-        iconRef: 'menu_book_outlined',
-        colorHint: '#8FA894',
-        sortOrder: 5,
-      ),
-      Category(
-        id: 'video',
-        name: 'Video Reminders',
-        iconRef: 'play_circle_outline',
-        colorHint: '#2F5D4A',
-        sortOrder: 6,
-      ),
-      Category(
-        id: 'ramadan',
-        name: 'Ramadan Specials',
-        iconRef: 'brightness_2_outlined',
-        colorHint: '#B8956A',
-        sortOrder: 7,
-      ),
+  @override
+  Future<void> syncLibraryCategories() async {
+    const legacyIds = [
+      'morning',
+      'evening',
+      'situational',
+      'reflections',
+      'video',
+      'ramadan',
     ];
 
     final batch = _db.batch();
-    for (final cat in defaults) {
+    for (final cat in libraryCategories) {
       batch.set(_categories.doc(cat.id), cat.toJson());
     }
+    for (final id in legacyIds) {
+      batch.delete(_categories.doc(id));
+    }
     await batch.commit();
+
+    final snap = await _content.get();
+    for (final doc in snap.docs) {
+      final item = _fromDoc(doc);
+      final aligned = alignContentItem(item);
+      if (aligned.category == item.category && aligned.section == item.section) {
+        continue;
+      }
+      try {
+        await doc.reference.set(
+          {
+            'category': aligned.category,
+            'section': aligned.section,
+          },
+          SetOptions(merge: true),
+        );
+      } catch (_) {
+        // A contributor can update only their own pieces.
+      }
+    }
   }
 }

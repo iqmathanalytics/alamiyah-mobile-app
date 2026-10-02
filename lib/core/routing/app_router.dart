@@ -16,6 +16,8 @@ import '../../features/calendar/presentation/calendar_screen.dart';
 import '../../features/categories/presentation/categories_screen.dart';
 import '../../features/content/presentation/content_detail_screen.dart';
 import '../../features/display/presentation/display_settings_screen.dart';
+import '../../features/library/library_section_screen.dart';
+import '../../features/qibla/qibla_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/live_feed/presentation/live_feed_screen.dart';
 import '../../features/onboarding/onboarding_controller.dart';
@@ -106,6 +108,26 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/qibla',
+        parentNavigatorKey: _rootKey,
+        pageBuilder: (context, state) => fadeSlidePage(
+          key: state.pageKey,
+          playSwoosh: true,
+          child: const QiblaScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/library/:id',
+        parentNavigatorKey: _rootKey,
+        pageBuilder: (context, state) => fadeSlidePage(
+          key: state.pageKey,
+          playSwoosh: true,
+          child: LibrarySectionScreen(
+            collectionId: state.pathParameters['id']!,
+          ),
+        ),
       ),
       GoRoute(
         path: '/display',

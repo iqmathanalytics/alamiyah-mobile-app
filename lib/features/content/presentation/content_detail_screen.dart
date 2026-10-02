@@ -14,6 +14,7 @@ import '../../../shared/widgets/content_card.dart';
 import '../../../shared/widgets/content_video_player.dart';
 import '../../bookmarks/providers/bookmark_controller.dart';
 import '../../home/providers/feed_providers.dart';
+import '../../library/library_catalog.dart';
 
 class ContentDetailScreen extends ConsumerStatefulWidget {
   const ContentDetailScreen({super.key, required this.contentId});
@@ -59,7 +60,6 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
     final contentId = widget.contentId;
     final async = ref.watch(contentByIdProvider(contentId));
     final bookmarks = ref.watch(bookmarkControllerProvider);
-    final categories = ref.watch(categoriesProvider).asData?.value ?? [];
     final relatedAsync = ref.watch(relatedContentProvider(contentId));
     final colors = context.alamiyahColors;
     final bookmarked = bookmarks.contains(contentId);
@@ -126,12 +126,12 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
           if (item == null) {
             return const Center(child: Text('Content not found'));
           }
-          final categoryName = () {
-            for (final c in categories) {
-              if (c.id == item.category) return c.name;
-            }
-            return item.category;
-          }();
+          final collection = collectionById(item.category);
+          final categoryName = collection == null
+              ? item.category
+              : item.section == null
+                  ? collection.title
+                  : '${collection.title} · ${item.section}';
 
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),

@@ -9,6 +9,7 @@ ContentItem _$ContentItemFromJson(Map<String, dynamic> json) => ContentItem(
           .key,
       title: json['title'] as String,
       category: json['category'] as String,
+      section: json['section'] as String?,
       tags: (json['tags'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -46,6 +47,7 @@ Map<String, dynamic> _$ContentItemToJson(ContentItem instance) =>
       'type': _$ContentTypeEnumMap[instance.type]!,
       'title': instance.title,
       'category': instance.category,
+      'section': instance.section,
       'tags': instance.tags,
       'arabicText': instance.arabicText,
       'transliteration': instance.transliteration,

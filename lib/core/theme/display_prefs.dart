@@ -3,10 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../constants/app_constants.dart';
+import '../l10n/app_language.dart';
 import '../motion/app_motion.dart';
 import 'alamiyah_colors.dart';
 
-enum AppThemeId { lightGreen, darkGreen, sepiaWarm, midnight }
+enum AppThemeId {
+  lightGreen,
+  sepiaWarm,
+  fajr,
+  mist,
+  henna,
+  mint,
+  darkGreen,
+  midnight,
+  maghrib,
+  isha,
+  oud,
+  onyx,
+}
 
 enum AccentId { gold, brass, sage, clay, teal, rose }
 
@@ -20,29 +34,64 @@ enum ChimeId { droplet, wind, bell }
 
 extension AppThemeIdX on AppThemeId {
   String get label => switch (this) {
-        AppThemeId.lightGreen => 'Light Green',
-        AppThemeId.darkGreen => 'Dark Green',
-        AppThemeId.sepiaWarm => 'Parchment',
-        AppThemeId.midnight => 'Midnight',
+        AppThemeId.lightGreen => 'Olive',
+        AppThemeId.sepiaWarm => 'Sandstone',
+        AppThemeId.fajr => 'Fajr',
+        AppThemeId.mist => 'Mist',
+        AppThemeId.henna => 'Henna',
+        AppThemeId.mint => 'Mint',
+        AppThemeId.darkGreen => 'Emerald',
+        AppThemeId.midnight => 'Lapis',
+        AppThemeId.maghrib => 'Maghrib',
+        AppThemeId.isha => 'Isha',
+        AppThemeId.oud => 'Oud',
+        AppThemeId.onyx => 'Onyx',
       };
 
   String get subtitle => switch (this) {
         AppThemeId.lightGreen => 'Sage over cream',
+        AppThemeId.sepiaWarm => 'Warm paper',
+        AppThemeId.fajr => 'Soft dawn rose',
+        AppThemeId.mist => 'Cool morning grey',
+        AppThemeId.henna => 'Warm clay',
+        AppThemeId.mint => 'Fresh garden',
         AppThemeId.darkGreen => 'Forest night',
-        AppThemeId.sepiaWarm => 'Warm reading light',
-        AppThemeId.midnight => 'Deep harbor teal',
+        AppThemeId.midnight => 'Deep harbor',
+        AppThemeId.maghrib => 'After sunset',
+        AppThemeId.isha => 'Indigo night',
+        AppThemeId.oud => 'Dark wood',
+        AppThemeId.onyx => 'True black',
       };
 
-  bool get isDark =>
-      this == AppThemeId.darkGreen || this == AppThemeId.midnight;
+  bool get isDark => switch (this) {
+        AppThemeId.darkGreen ||
+        AppThemeId.midnight ||
+        AppThemeId.maghrib ||
+        AppThemeId.isha ||
+        AppThemeId.oud ||
+        AppThemeId.onyx =>
+          true,
+        _ => false,
+      };
 
   AlamiyahColors get palette => switch (this) {
         AppThemeId.lightGreen => AlamiyahColors.lightGreen,
-        AppThemeId.darkGreen => AlamiyahColors.darkGreen,
         AppThemeId.sepiaWarm => AlamiyahColors.sepiaWarm,
+        AppThemeId.fajr => AlamiyahColors.fajr,
+        AppThemeId.mist => AlamiyahColors.mist,
+        AppThemeId.henna => AlamiyahColors.henna,
+        AppThemeId.mint => AlamiyahColors.mint,
+        AppThemeId.darkGreen => AlamiyahColors.darkGreen,
         AppThemeId.midnight => AlamiyahColors.midnight,
+        AppThemeId.maghrib => AlamiyahColors.maghrib,
+        AppThemeId.isha => AlamiyahColors.isha,
+        AppThemeId.oud => AlamiyahColors.oud,
+        AppThemeId.onyx => AlamiyahColors.onyx,
       };
 }
+
+List<AppThemeId> themesFor({required bool dark}) =>
+    AppThemeId.values.where((id) => id.isDark == dark).toList();
 
 extension AccentIdX on AccentId {
   String get label => switch (this) {
@@ -117,6 +166,8 @@ extension ChimeIdX on ChimeId {
 class DisplayPrefs {
   const DisplayPrefs({
     this.theme = AppThemeId.lightGreen,
+    this.lightTheme = AppThemeId.lightGreen,
+    this.darkTheme = AppThemeId.darkGreen,
     this.fontScale = 1.0,
     this.accent = AccentId.gold,
     this.arabicFont = ArabicFontId.uthmani,
@@ -126,9 +177,12 @@ class DisplayPrefs {
     this.reduceMotion = false,
     this.soundEffects = true,
     this.chime = ChimeId.droplet,
+    this.language = AppLanguage.en,
   });
 
   final AppThemeId theme;
+  final AppThemeId lightTheme;
+  final AppThemeId darkTheme;
   final double fontScale;
   final AccentId accent;
   final ArabicFontId arabicFont;
@@ -138,18 +192,19 @@ class DisplayPrefs {
   final bool reduceMotion;
   final bool soundEffects;
   final ChimeId chime;
+  final AppLanguage language;
 
   static const fontStops = [0.85, 1.0, 1.15, 1.35];
   static const fontLabels = ['Small', 'Regular', 'Large', 'Extra'];
 
-  AppThemeId resolvedTheme({
+  bool isNightNow({
     required Brightness platform,
     DateTime? now,
     DateTime? maghrib,
     DateTime? fajr,
   }) {
     final moment = now ?? DateTime.now();
-    final night = switch (appearance) {
+    return switch (appearance) {
       AppearanceMode.day => false,
       AppearanceMode.night => true,
       AppearanceMode.system => platform == Brightness.dark,
@@ -158,15 +213,28 @@ class DisplayPrefs {
             fajr != null &&
             (moment.isAfter(maghrib) || moment.isBefore(fajr)),
     };
-    if (night == theme.isDark) return theme;
-    if (night) {
-      return theme == AppThemeId.sepiaWarm
-          ? AppThemeId.midnight
-          : AppThemeId.darkGreen;
-    }
-    return theme == AppThemeId.midnight
-        ? AppThemeId.sepiaWarm
-        : AppThemeId.lightGreen;
+  }
+
+  AppThemeId resolvedTheme({
+    required Brightness platform,
+    DateTime? now,
+    DateTime? maghrib,
+    DateTime? fajr,
+  }) {
+    final night = isNightNow(
+      platform: platform,
+      now: now,
+      maghrib: maghrib,
+      fajr: fajr,
+    );
+    return switch (appearance) {
+      AppearanceMode.system || AppearanceMode.auto =>
+        night ? AppThemeId.darkGreen : AppThemeId.lightGreen,
+      AppearanceMode.day =>
+        lightTheme.isDark ? AppThemeId.lightGreen : lightTheme,
+      AppearanceMode.night =>
+        darkTheme.isDark ? darkTheme : AppThemeId.darkGreen,
+    };
   }
 
   int get fontStopIndex {
@@ -184,6 +252,8 @@ class DisplayPrefs {
 
   DisplayPrefs copyWith({
     AppThemeId? theme,
+    AppThemeId? lightTheme,
+    AppThemeId? darkTheme,
     double? fontScale,
     AccentId? accent,
     ArabicFontId? arabicFont,
@@ -193,9 +263,12 @@ class DisplayPrefs {
     bool? reduceMotion,
     bool? soundEffects,
     ChimeId? chime,
+    AppLanguage? language,
   }) {
     return DisplayPrefs(
       theme: theme ?? this.theme,
+      lightTheme: lightTheme ?? this.lightTheme,
+      darkTheme: darkTheme ?? this.darkTheme,
       fontScale: fontScale ?? this.fontScale,
       accent: accent ?? this.accent,
       arabicFont: arabicFont ?? this.arabicFont,
@@ -205,11 +278,14 @@ class DisplayPrefs {
       reduceMotion: reduceMotion ?? this.reduceMotion,
       soundEffects: soundEffects ?? this.soundEffects,
       chime: chime ?? this.chime,
+      language: language ?? this.language,
     );
   }
 
   Map<String, dynamic> toMap() => {
         'theme': theme.name,
+        'lightTheme': lightTheme.name,
+        'darkTheme': darkTheme.name,
         'fontScale': fontScale,
         'accent': accent.name,
         'arabicFont': arabicFont.name,
@@ -219,14 +295,24 @@ class DisplayPrefs {
         'reduceMotion': reduceMotion,
         'soundEffects': soundEffects,
         'chime': chime.name,
+        'language': language.name,
       };
 
   factory DisplayPrefs.fromBox(Box<dynamic> box) {
     final raw = box.get(AppConstants.displayPrefsKey);
     if (raw is Map) {
       final map = Map<String, dynamic>.from(raw);
+      final stored = _themeFrom(map['theme'] as String?);
       return DisplayPrefs(
-        theme: _themeFrom(map['theme'] as String?),
+        theme: stored,
+        lightTheme: _themeFrom(
+          map['lightTheme'] as String?,
+          fallback: stored.isDark ? AppThemeId.lightGreen : stored,
+        ),
+        darkTheme: _themeFrom(
+          map['darkTheme'] as String?,
+          fallback: stored.isDark ? stored : AppThemeId.darkGreen,
+        ),
         fontScale: (map['fontScale'] as num?)?.toDouble() ?? 1.0,
         accent: _enumFrom(AccentId.values, map['accent'] as String?) ??
             AccentId.gold,
@@ -244,6 +330,8 @@ class DisplayPrefs {
         soundEffects: map['soundEffects'] as bool? ?? true,
         chime: _enumFrom(ChimeId.values, map['chime'] as String?) ??
             ChimeId.droplet,
+        language: _enumFrom(AppLanguage.values, map['language'] as String?) ??
+            AppLanguage.en,
       );
     }
     return DisplayPrefs(theme: _themeFrom(box.get(AppConstants.themeModeKey) as String?));
@@ -259,8 +347,11 @@ ArabicFontId _arabicFontFrom(String? name) {
   };
 }
 
-AppThemeId _themeFrom(String? name) {
-  return _enumFrom(AppThemeId.values, name) ?? AppThemeId.lightGreen;
+AppThemeId _themeFrom(
+  String? name, {
+  AppThemeId fallback = AppThemeId.lightGreen,
+}) {
+  return _enumFrom(AppThemeId.values, name) ?? fallback;
 }
 
 T? _enumFrom<T extends Enum>(List<T> values, String? name) {
@@ -278,6 +369,7 @@ class AlamiyahDisplay extends ThemeExtension<AlamiyahDisplay> {
     required this.fontScale,
     required this.arabicFont,
     required this.reduceMotion,
+    required this.language,
   });
 
   factory AlamiyahDisplay.fromPrefs(DisplayPrefs prefs) {
@@ -285,23 +377,27 @@ class AlamiyahDisplay extends ThemeExtension<AlamiyahDisplay> {
       fontScale: prefs.fontScale,
       arabicFont: prefs.arabicFont,
       reduceMotion: prefs.reduceMotion,
+      language: prefs.language,
     );
   }
 
   final double fontScale;
   final ArabicFontId arabicFont;
   final bool reduceMotion;
+  final AppLanguage language;
 
   @override
   AlamiyahDisplay copyWith({
     double? fontScale,
     ArabicFontId? arabicFont,
     bool? reduceMotion,
+    AppLanguage? language,
   }) {
     return AlamiyahDisplay(
       fontScale: fontScale ?? this.fontScale,
       arabicFont: arabicFont ?? this.arabicFont,
       reduceMotion: reduceMotion ?? this.reduceMotion,
+      language: language ?? this.language,
     );
   }
 
@@ -312,6 +408,7 @@ class AlamiyahDisplay extends ThemeExtension<AlamiyahDisplay> {
       fontScale: fontScale + (other.fontScale - fontScale) * t,
       arabicFont: t < 0.5 ? arabicFont : other.arabicFont,
       reduceMotion: t < 0.5 ? reduceMotion : other.reduceMotion,
+      language: t < 0.5 ? language : other.language,
     );
   }
 }
@@ -323,6 +420,7 @@ extension AlamiyahDisplayX on BuildContext {
         fontScale: 1,
         arabicFont: ArabicFontId.uthmani,
         reduceMotion: false,
+        language: AppLanguage.en,
       );
 
   double contentSize(double base) => base * alamiyahDisplay.fontScale;
@@ -346,8 +444,12 @@ class DisplayPrefsController extends Notifier<DisplayPrefs> {
     await _box.put(AppConstants.themeModeKey, next.theme.name);
   }
 
-  Future<void> setTheme(AppThemeId theme) =>
-      update((p) => p.copyWith(theme: theme));
+  Future<void> setTheme(AppThemeId theme) => update((p) {
+        if (theme.isDark) {
+          return p.copyWith(theme: theme, darkTheme: theme);
+        }
+        return p.copyWith(theme: theme, lightTheme: theme);
+      });
 
   Future<void> setFontScale(double scale) =>
       update((p) => p.copyWith(fontScale: scale));
@@ -357,6 +459,9 @@ class DisplayPrefsController extends Notifier<DisplayPrefs> {
 
   Future<void> setArabicFont(ArabicFontId font) =>
       update((p) => p.copyWith(arabicFont: font));
+
+  Future<void> setLanguage(AppLanguage language) =>
+      update((p) => p.copyWith(language: language));
 
   Future<void> setAppearance(AppearanceMode mode) =>
       update((p) => p.copyWith(appearance: mode));

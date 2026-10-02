@@ -1,3 +1,4 @@
+import '../../features/library/library_catalog.dart';
 import '../models/models.dart';
 
 /// Shared demo library used after a wipe — long text, images, and a tiny playable mp4.
@@ -18,7 +19,8 @@ class DemoContentSeed {
         id: 'demo_featured_morning',
         type: ContentType.text,
         title: 'Morning light — a long adhkar for a quiet start',
-        category: 'morning',
+        category: 'invocations',
+        section: collectionById('invocations')!.entries[1].title,
         tags: const ['morning', 'adhkar', 'calm', 'featured'],
         arabicText:
             'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ. رَبِّ أَسْأَلُكَ خَيْرَ مَا فِي هَذَا الْيَوْمِ وَخَيْرَ مَا بَعْدَهُ، وَأَعُوذُ بِكَ مِنْ شَرِّ مَا فِي هَذَا الْيَوْمِ وَشَرِّ مَا بَعْدَهُ، رَبِّ أَعُوذُ بِكَ مِنَ الْكَسَلِ وَسُوءِ الْكِبَرِ، رَبِّ أَعُوذُ بِكَ مِنْ عَذَابٍ فِي النَّارِ وَعَذَابٍ فِي الْقَبْرِ.',
@@ -39,7 +41,8 @@ class DemoContentSeed {
         id: 'demo_long_anxiety',
         type: ContentType.text,
         title: 'When the chest feels tight — a dua and reflection',
-        category: 'situational',
+        category: 'invocations',
+        section: collectionById('invocations')!.entries[0].title,
         tags: const ['anxiety', 'peace', 'dua', 'long'],
         arabicText:
             'اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْهَمِّ وَالْحَزَنِ، وَالْعَجْزِ وَالْكَسَلِ، وَالْجُبْنِ وَالْبُخْلِ، وَضَلَعِ الدَّيْنِ، وَغَلَبَةِ الرِّجَالِ.\n\n'
@@ -62,7 +65,8 @@ class DemoContentSeed {
         id: 'demo_evening_long',
         type: ContentType.text,
         title: 'Evening settle — closing the day with remembrance',
-        category: 'evening',
+        category: 'invocations',
+        section: collectionById('invocations')!.entries[4].title,
         tags: const ['evening', 'adhkar', 'sleep'],
         arabicText:
             'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ.\n\n'
@@ -84,6 +88,7 @@ class DemoContentSeed {
         type: ContentType.text,
         title: 'Ar-Rahman, Ar-Rahim — sitting with mercy',
         category: 'names',
+        section: collectionById('names')!.entries[0].title,
         tags: const ['names', 'rahman', 'rahim', 'reflection'],
         arabicText: 'الرَّحْمَٰنُ · الرَّحِيمُ',
         transliteration: 'Ar-Rahman · Ar-Rahim',
@@ -102,7 +107,8 @@ class DemoContentSeed {
         id: 'demo_image_calm_sky',
         type: ContentType.image,
         title: 'Look up — a visual pause before dhikr',
-        category: 'reflections',
+        category: 'teachings',
+        section: collectionById('teachings')!.entries[2].title,
         tags: const ['image', 'calm', 'sky', 'pause'],
         translation:
             'Before you scroll further, stay with this sky for twenty seconds. Soften the jaw. Unclench the hands. Then choose one short dhikr — Subhanallah, Alhamdulillah, or Allahu Akbar — and say it thirty-three times while the image is still in mind.\n\n'
@@ -122,7 +128,8 @@ class DemoContentSeed {
         id: 'demo_image_masjid_light',
         type: ContentType.image,
         title: 'Light on stone — patience in still frames',
-        category: 'reflections',
+        category: 'teachings',
+        section: collectionById('teachings')!.entries[2].title,
         tags: const ['image', 'masjid', 'patience'],
         arabicText: 'وَاصْبِرْ وَمَا صَبْرُكَ إِلَّا بِاللَّهِ',
         transliteration: 'Wasbir wa ma sabruka illa billah',
@@ -145,7 +152,8 @@ class DemoContentSeed {
         id: 'demo_image_ramadan_table',
         type: ContentType.image,
         title: 'Dates and dusk — a Ramadan mood board for the heart',
-        category: 'ramadan',
+        category: 'teachings',
+        section: collectionById('teachings')!.entries[1].title,
         tags: const ['ramadan', 'image', 'iftar', 'gratitude'],
         translation:
             'Ramadan is not only hunger and schedule. It is the soft hour when a table becomes a place of thanks. Stay with this image and name who you would invite if distance were nothing — living or passed — and make dua for them by name.\n\n'
@@ -164,7 +172,8 @@ class DemoContentSeed {
         id: 'demo_video_bee',
         type: ContentType.video,
         title: 'A tiny reminder — watch, then breathe',
-        category: 'video',
+        category: 'poems',
+        section: collectionById('poems')!.entries[0].title,
         tags: const ['video', 'short', 'presence'],
         translation:
             'This is a very small sample clip so you can test in-app playback. Watch once without multitasking. When it ends, close your eyes for three breaths and say: Subhanallahi wa bihamdihi.\n\n'
@@ -182,7 +191,8 @@ class DemoContentSeed {
         id: 'demo_daily_dhikr_long',
         type: ContentType.text,
         title: 'Daily dhikr — Subhanallah, Alhamdulillah, Allahu Akbar',
-        category: 'morning',
+        category: 'invocations',
+        section: collectionById('invocations')!.entries[1].title,
         tags: const ['daily', 'dhikr', 'tasbih'],
         arabicText: 'سُبْحَانَ اللهِ · الْحَمْدُ لِلَّهِ · اللهُ أَكْبَرُ',
         transliteration: 'Subhanallah · Alhamdulillah · Allahu Akbar',
@@ -201,7 +211,8 @@ class DemoContentSeed {
         id: 'demo_quote_long',
         type: ContentType.text,
         title: 'A quiet line for heavy days',
-        category: 'reflections',
+        category: 'teachings',
+        section: collectionById('teachings')!.entries[0].title,
         tags: const ['quote', 'hope', 'long'],
         arabicText: 'فَإِنَّ مَعَ الْعُسْرِ يُسْرًا · إِنَّ مَعَ الْعُسْرِ يُسْرًا',
         transliteration:

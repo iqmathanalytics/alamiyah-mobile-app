@@ -33,4 +33,7 @@ abstract class ContentRepository {
   Future<void> wipeAndSeedDemoContent();
 
   Future<void> seedDefaultCategoriesIfEmpty();
+
+  /// Rewrite older category ids onto the current library list.
+  Future<void> syncLibraryCategories();
 }

@@ -8,9 +8,9 @@ class AppMotion {
 
   static const Curve curve = Curves.easeInOutCubic;
 
-  static const Duration micro = Duration(milliseconds: 180);
-  static const Duration screen = Duration(milliseconds: 300);
-  static const Duration theme = Duration(milliseconds: 400);
+  static const Duration micro = Duration(milliseconds: 120);
+  static const Duration screen = Duration(milliseconds: 220);
+  static const Duration theme = Duration(milliseconds: 180);
 
   /// Updated by [DisplayPrefsController] so page routes can scale duration.
   static bool reduceMotion = false;

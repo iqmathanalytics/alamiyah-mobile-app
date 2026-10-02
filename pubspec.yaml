@@ -59,6 +59,10 @@ dependencies:
   flutter_timezone: ^5.1.0
   share_plus: ^13.3.0
   video_player: ^2.10.0
+  sensors_plus: ^6.1.2
+  home_widget: ^0.8.0
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
@@ -95,5 +99,6 @@ flutter:
 
   assets:
     - assets/mock/sample_content.json
+    - assets/data/malaysia_cities.json
     - assets/sounds/
     - assets/branding/

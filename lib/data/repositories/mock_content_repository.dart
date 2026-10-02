@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import '../../features/library/library_catalog.dart';
 import '../models/models.dart';
 import '../services/demo_content_seed.dart';
 import 'content_repository.dart';
@@ -12,17 +13,12 @@ class MockContentRepository implements ContentRepository {
   final String assetPath;
 
   List<ContentItem>? _content;
-  List<Category>? _categories;
   List<LiveFeedLink>? _liveFeed;
 
   Future<void> _ensureLoaded() async {
     if (_content != null) return;
     final raw = await rootBundle.loadString(assetPath);
     final map = jsonDecode(raw) as Map<String, dynamic>;
-    _categories = (map['categories'] as List<dynamic>)
-        .map((e) => Category.fromJson(e as Map<String, dynamic>))
-        .toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     _content = (map['content'] as List<dynamic>)
         .map((e) => ContentItem.fromJson(e as Map<String, dynamic>))
         .toList()
@@ -41,6 +37,7 @@ class MockContentRepository implements ContentRepository {
     await _ensureLoaded();
     await Future<void>.delayed(const Duration(milliseconds: 400));
     return _content!
+        .map(alignContentItem)
         .where((c) => !publishedOnly || c.status == ContentStatus.published)
         .where((c) => categoryId == null || c.category == categoryId)
         .where((c) => type == null || c.type == type)
@@ -51,7 +48,7 @@ class MockContentRepository implements ContentRepository {
   Future<ContentItem?> fetchById(String id) async {
     await _ensureLoaded();
     try {
-      return _content!.firstWhere((c) => c.id == id);
+      return alignContentItem(_content!.firstWhere((c) => c.id == id));
     } catch (_) {
       return null;
     }
@@ -59,8 +56,7 @@ class MockContentRepository implements ContentRepository {
 
   @override
   Future<List<Category>> fetchCategories() async {
-    await _ensureLoaded();
-    return List.unmodifiable(_categories!);
+    return libraryCategories;
   }
 
   @override
@@ -102,11 +98,12 @@ class MockContentRepository implements ContentRepository {
   Future<ContentItem?> fetchFeatured() async {
     await _ensureLoaded();
     try {
-      return _content!.firstWhere(
+      return alignContentItem(_content!.firstWhere(
         (c) => c.featured && c.status == ContentStatus.published,
-      );
+      ));
     } catch (_) {
       final published = _content!
+          .map(alignContentItem)
           .where((c) => c.status == ContentStatus.published)
           .toList();
       return published.isEmpty ? null : published.first;
@@ -148,6 +145,12 @@ class MockContentRepository implements ContentRepository {
 
   @override
   Future<void> seedDefaultCategoriesIfEmpty() async {
+    await syncLibraryCategories();
+  }
+
+  @override
+  Future<void> syncLibraryCategories() async {
     await _ensureLoaded();
+    _content = _content!.map(alignContentItem).toList();
   }
 }

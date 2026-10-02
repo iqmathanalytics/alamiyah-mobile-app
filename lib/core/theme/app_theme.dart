@@ -11,11 +11,12 @@ class AppTheme {
     final brand = prefs.theme.palette.withAccent(prefs.accent.color);
     final brightness =
         prefs.theme.isDark ? Brightness.dark : Brightness.light;
-    final scaffold = prefs.theme == AppThemeId.midnight
-        ? const Color(0xFF0B141A)
-        : prefs.theme == AppThemeId.darkGreen
-            ? const Color(0xFF121F1A)
-            : brand.surfaceElevated;
+    final scaffold = switch (prefs.theme) {
+      AppThemeId.midnight => const Color(0xFF0B141A),
+      AppThemeId.darkGreen => const Color(0xFF121F1A),
+      AppThemeId.onyx => const Color(0xFF000000),
+      _ => brand.surfaceElevated,
+    };
     final onPrimary = brand.brandPrimary.computeLuminance() > 0.45
         ? brand.onAccent
         : const Color(0xFFF7F4EE);

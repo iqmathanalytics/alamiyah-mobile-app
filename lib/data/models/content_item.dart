@@ -13,6 +13,7 @@ class ContentItem {
     required this.type,
     required this.title,
     required this.category,
+    this.section,
     required this.tags,
     this.arabicText,
     this.transliteration,
@@ -32,6 +33,9 @@ class ContentItem {
   final ContentType type;
   final String title;
   final String category;
+
+  /// Child list inside [category], matching a library entry title.
+  final String? section;
   final List<String> tags;
   final String? arabicText;
   final String? transliteration;
@@ -56,6 +60,8 @@ class ContentItem {
     ContentType? type,
     String? title,
     String? category,
+    String? section,
+    bool clearSection = false,
     List<String>? tags,
     String? arabicText,
     String? transliteration,
@@ -76,6 +82,7 @@ class ContentItem {
       type: type ?? this.type,
       title: title ?? this.title,
       category: category ?? this.category,
+      section: clearSection ? null : (section ?? this.section),
       tags: tags ?? this.tags,
       arabicText: arabicText ?? this.arabicText,
       transliteration: transliteration ?? this.transliteration,

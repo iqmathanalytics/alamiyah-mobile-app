@@ -8,6 +8,7 @@ import '../../../data/models/models.dart';
 import '../../../data/services/service_providers.dart';
 import '../../../shared/widgets/animated_filter_chip.dart';
 import '../../home/providers/feed_providers.dart';
+import '../../library/library_catalog.dart';
 import '../providers/admin_providers.dart';
 
 class AdminContentListScreen extends ConsumerStatefulWidget {
@@ -181,7 +182,12 @@ class _AdminContentListScreenState
                           style: GoogleFonts.dmSans(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Text(
-                          '${item.type.name} · ${item.status.name} · ${item.authorName}',
+                          [
+                            collectionById(item.category)?.title ?? item.category,
+                            if (item.section != null) item.section!,
+                            item.type.name,
+                            item.status.name,
+                          ].join(' · '),
                         ),
                         trailing: PopupMenuButton<String>(
                           onSelected: (action) async {

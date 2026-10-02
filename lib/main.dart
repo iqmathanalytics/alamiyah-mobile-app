@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -7,7 +8,10 @@ import 'core/constants/app_constants.dart';
 import 'core/motion/app_motion.dart';
 import 'core/routing/app_router.dart';
 import 'core/sound/sound_service.dart';
+import 'core/l10n/app_language.dart';
+import 'core/l10n/app_strings.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/alamiyah_widgets.dart';
 import 'core/theme/display_prefs.dart';
 import 'data/services/fasting_reminder_service.dart';
 import 'data/services/fasting_tracker.dart';
@@ -45,6 +49,7 @@ class AlamiyahApp extends ConsumerStatefulWidget {
 }
 
 class _AlamiyahAppState extends ConsumerState<AlamiyahApp> {
+  String? _paletteKey;
   @override
   void initState() {
     super.initState();
@@ -83,6 +88,10 @@ class _AlamiyahAppState extends ConsumerState<AlamiyahApp> {
         ramadanActive: HijriDate.now().isRamadan || flags.preview,
         location: ref.read(prayerLocationProvider),
       );
+      await AlamiyahWidgets.push(
+        ref.read(todayPrayersProvider),
+        AppStrings(ref.read(displayPrefsProvider).language),
+      );
     });
   }
 
@@ -98,6 +107,18 @@ class _AlamiyahAppState extends ConsumerState<AlamiyahApp> {
       fajr: prayers.fajr,
     );
     final theme = AppTheme.fromPrefs(prefs.copyWith(theme: resolved));
+    final paletteKey = '${resolved.name}|${prefs.accent.name}';
+    final animateTheme =
+        _paletteKey != null && _paletteKey != paletteKey;
+    _paletteKey = paletteKey;
+
+    ref.listen(todayPrayersProvider, (previous, next) {
+      AlamiyahWidgets.push(next, AppStrings(prefs.language));
+    });
+    ref.listen(displayPrefsProvider, (previous, next) {
+      if (previous?.language == next.language) return;
+      AlamiyahWidgets.push(prayers, AppStrings(next.language));
+    });
 
     return MaterialApp.router(
       title: AppConstants.appName,
@@ -105,18 +126,22 @@ class _AlamiyahAppState extends ConsumerState<AlamiyahApp> {
       theme: theme,
       darkTheme: theme,
       themeMode: ThemeMode.light,
+      themeAnimationDuration:
+          animateTheme ? AppMotion.theme : Duration.zero,
+      themeAnimationCurve: AppMotion.curve,
+      locale: Locale(prefs.language.code),
+      supportedLocales: [
+        for (final language in AppLanguage.values) Locale(language.code),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       routerConfig: router,
       builder: (context, child) {
-        return AnimatedTheme(
-          duration: AppMotion.scaled(
-            AppMotion.theme,
-            reduceMotion: prefs.reduceMotion,
-          ),
-          curve: AppMotion.curve,
-          data: theme,
-          child: BrandIntroOverlay(
-            child: child ?? const SizedBox.shrink(),
-          ),
+        return BrandIntroOverlay(
+          child: child ?? const SizedBox.shrink(),
         );
       },
     );

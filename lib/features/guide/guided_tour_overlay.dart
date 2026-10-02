@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/l10n/app_strings.dart';
 import '../../core/motion/app_motion.dart';
 import '../../core/sound/sound_service.dart';
 import '../../core/theme/alamiyah_colors.dart';
@@ -20,6 +21,7 @@ class _TourStep {
     required this.title,
     required this.body,
     required this.resolve,
+    this.target,
     required this.shape,
     this.padding = 10,
     this.cardSide = TourCardSide.auto,
@@ -30,6 +32,7 @@ class _TourStep {
   final String title;
   final String body;
   final Rect? Function() resolve;
+  final GlobalKey? target;
   final TourFocusShape shape;
   final double padding;
   final TourCardSide cardSide;
@@ -42,6 +45,7 @@ final _steps = <_TourStep>[
     title: 'Your calm feed',
     body: 'Featured duas and gentle reminders live right here.',
     resolve: () => TourTargets.rectOf(TourTargets.feed),
+    target: TourTargets.feed,
     shape: TourFocusShape.roundedRect,
     padding: 10,
     cardSide: TourCardSide.below,
@@ -50,8 +54,9 @@ final _steps = <_TourStep>[
   _TourStep(
     icon: Icons.filter_vintage_outlined,
     title: 'Browse by mood',
-    body: 'Tap a chip to filter instantly — soft and quick.',
+    body: 'Open Qur’an, invocations, salawat, and the rest of the library.',
     resolve: () => TourTargets.rectOf(TourTargets.categories),
+    target: TourTargets.categories,
     shape: TourFocusShape.roundedRect,
     padding: 8,
     cardSide: TourCardSide.below,
@@ -82,6 +87,7 @@ final _steps = <_TourStep>[
     title: 'Make it yours',
     body: 'Theme, Arabic type, text size, and soft sounds.',
     resolve: () => TourTargets.rectOf(TourTargets.display),
+    target: TourTargets.display,
     shape: TourFocusShape.circle,
     padding: 14,
     cardSide: TourCardSide.below,
@@ -151,11 +157,18 @@ class _GuidedTourHostState extends ConsumerState<GuidedTourHost>
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStart());
   }
 
+  Rect _inHost(Rect global) {
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.hasSize || !box.attached) return global;
+    final origin = box.localToGlobal(Offset.zero);
+    return global.shift(Offset(-origin.dx, -origin.dy));
+  }
+
   Rect _measure(int index, Size size) {
     final step = _steps[index];
     final measured = step.resolve();
     if (measured != null && measured.width > 4 && measured.height > 4) {
-      return measured.inflate(step.padding);
+      return _inHost(measured).inflate(step.padding);
     }
     final c = Offset(
       size.width * step.fallback.dx,
@@ -169,6 +182,18 @@ class _GuidedTourHostState extends ConsumerState<GuidedTourHost>
     );
   }
 
+  Future<void> _revealTarget(int index) async {
+    final targetContext = _steps[index].target?.currentContext;
+    if (targetContext == null || !targetContext.mounted) return;
+    await Scrollable.ensureVisible(
+      targetContext,
+      alignment: 0.32,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
   Future<void> _maybeStart() async {
     final onboarded = ref.read(onboardingCompleteProvider);
     final tourDone = ref.read(guidedTourCompleteProvider);
@@ -179,6 +204,9 @@ class _GuidedTourHostState extends ConsumerState<GuidedTourHost>
     if (ref.read(guidedTourCompleteProvider)) return;
 
     await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || _cancelled) return;
+
+    await _revealTarget(0);
     if (!mounted || _cancelled) return;
 
     final size = MediaQuery.sizeOf(context);
@@ -213,7 +241,11 @@ class _GuidedTourHostState extends ConsumerState<GuidedTourHost>
 
     final size = MediaQuery.sizeOf(context);
     final next = _step + 1;
-    // Freeze current spotlight at its live position, then morph to next.
+    await _revealTarget(next);
+    if (!mounted) {
+      _busy = false;
+      return;
+    }
     final current = _focusRect(size);
     final nextRect = _measure(next, size);
 
@@ -614,7 +646,7 @@ class _TourCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      step.title,
+                      context.s.call('tour${index + 1}Title'),
                       style: GoogleFonts.dmSans(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -624,7 +656,7 @@ class _TourCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      step.body,
+                      context.s.call('tour${index + 1}Body'),
                       style: GoogleFonts.dmSans(
                         fontSize: 12.5,
                         height: 1.35,

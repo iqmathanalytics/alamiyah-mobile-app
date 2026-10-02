@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_prayer_desc">Next prayer and its time</string>
+    <string name="widget_adhkar_desc">A short remembrance for the time of day</string>
+    <string name="widget_lessons_desc">A short line from the teachings</string>
+</resources>

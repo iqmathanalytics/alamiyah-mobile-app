@@ -30,7 +30,7 @@
 		<string>youtube-app</string>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Alamiyah uses your location only to calculate prayer, suhoor, and iftar times.</string>
+	<string>Alamiyah uses your location to calculate prayer times and the direction of the Qibla.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

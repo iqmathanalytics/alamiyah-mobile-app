@@ -22,6 +22,7 @@ class AdminShell extends ConsumerStatefulWidget {
 
 class _AdminShellState extends ConsumerState<AdminShell> {
   var _seedAttempted = false;
+  var _categoriesSynced = false;
 
   int _indexFor(String location) {
     if (location.startsWith('/admin/users')) return 2;
@@ -48,6 +49,21 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       return;
     }
     context.go('/home');
+  }
+
+  Future<void> _syncCategories() async {
+    if (_categoriesSynced) return;
+    _categoriesSynced = true;
+    try {
+      await ref.read(contentRepositoryProvider).syncLibraryCategories();
+      ref.invalidate(adminContentListProvider);
+      ref.invalidate(publishedContentProvider);
+      ref.invalidate(featuredContentProvider);
+      ref.invalidate(categoriesProvider);
+    } catch (e) {
+      debugPrint('Category sync skipped: $e');
+      _categoriesSynced = false;
+    }
   }
 
   Future<void> _maybeSeedDemo() async {
@@ -93,7 +109,10 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeSeedDemo());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _maybeSeedDemo();
+      await _syncCategories();
+    });
 
     return PopScope(
       canPop: false,
